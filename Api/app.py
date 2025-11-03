@@ -5,6 +5,7 @@ app = Flask(__name__)
 CORS(app)
 
 # --- Función de Clasificación ---
+# --- Función de Clasificación ---
 def clasificar_condicion(duracion, severidad, impacto):
     """Clasifica la condición médica basada en los 3 datos recibidos."""
     # Convertir a minúsculas para una comparación robusta
@@ -12,19 +13,23 @@ def clasificar_condicion(duracion, severidad, impacto):
     severidad = severidad.lower()
     impacto = impacto.lower()
 
-    # 1. ENFERMEDAD CRÓNICA (Larga duración)
-    if duracion in ('prolongada', 'años', 'meses'):
+    # 1. ENFERMEDAD TERMINAL
+    if duracion in ('prolongada', 'años', 'meses') and severidad in ('muy intenso', 'grave') and impacto in ('incapacidad total', 'limitado permanentemente'):
+        return "ENFERMEDAD TERMINAL"
+
+    # 2. ENFERMEDAD CRÓNICA (Larga duración)
+    elif duracion in ('prolongada', 'años', 'meses'):
         return "ENFERMEDAD CRÓNICA"
-    
-    # 2. NO ENFERMO (Mínimo o Nulo)
+
+    # 3. NO ENFERMO (Mínimo o Nulo)
     elif duracion in ('ausente', 'breve') and severidad in ('nulo', 'mínimo') and impacto in ('normal', 'mínimo'):
         return "NO ENFERMO"
-    
-    # 3. ENFERMEDAD AGUDA (Corta duración con intensidad)
+
+    # 4. ENFERMEDAD AGUDA (Corta duración con intensidad)
     elif duracion in ('aguda', 'días', 'semanas') and (severidad in ('intenso', 'fuerte') or impacto in ('incapacidad', 'limitado')):
         return "ENFERMEDAD AGUDA"
-        
-    # 4. ENFERMEDAD LEVE (Corta duración y baja severidad)
+
+    # 5. ENFERMEDAD LEVE (Corta duración y baja severidad)
     elif duracion in ('aguda', 'días', 'semanas') and severidad in ('tolerable', 'leve') and impacto in ('mínimo', 'tolerable'):
         return "ENFERMEDAD LEVE"
 
