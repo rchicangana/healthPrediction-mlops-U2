@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clasificador Médico MLOps</title>
+    <style>
+        /* CSS sencillo para mejorar la presentación */
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        h1 { color: #333; text-align: center; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; width: 100%; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        #resultado { margin-top: 30px; padding: 15px; border: 2px solid #28a745; border-radius: 4px; background-color: #e2f0e8; font-size: 1.2em; text-align: center; font-weight: bold; }
+        .error { border-color: #dc3545 !important; background-color: #f8d7da !important; color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Clasificador de Condición Médica</h1>
+        <form id="clasificacionForm">
+            <label for="duracion">1. Duración:</label>
+            <select id="duracion" name="duracion" required>
+                <option value="" disabled selected>Seleccione duración...</option>
+                <option value="breve">Breve</option>
+                <option value="aguda">Aguda</option>
+                <option value="prolongada">Prolongada</option>
+            </select>
+
+            <label for="severidad">2. Severidad:</label>
+            <select id="severidad" name="severidad" required>
+                <option value="" disabled selected>Seleccione severidad...</option>
+                <option value="nulo">Nulo</option>
+                <option value="tolerable">Tolerable</option>
+                <option value="intenso">Intenso</option>
+            </select>
+
+            <label for="impacto">3. Impacto Funcional:</label>
+            <select id="impacto" name="impacto" required>
+                <option value="" disabled selected>Seleccione impacto...</option>
+                <option value="normal">Normal</option>
+                <option value="mínimo">Mínimo</option>
+                <option value="incapacidad">Incapacidad</option>
+            </select>
+
+            <button type="submit">Clasificar Condición</button>
+        </form>
+
+        <div id="resultado">Esperando datos...</div>
+    </div>
+
+    <script>
+        document.getElementById('clasificacionForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Evita que el formulario se envíe de forma tradicional
+
+            const form = event.target;
+            const duracion = form.duracion.value;
+            const severidad = form.severidad.value;
+            const impacto = form.impacto.value;
+            const resultadoDiv = document.getElementById('resultado');
+
+            // Dirección donde corre tu API (ajusta el puerto si es necesario)
+            const apiUrl = 'http://localhost:5000/clasificar';
+
+            const payload = { duracion, severidad, impacto };
+
+            resultadoDiv.innerText = 'Clasificando...';
+            resultadoDiv.classList.remove('error');
+
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Intenta leer el JSON de error si existe
+                    return response.json()
+                        .catch(() => { throw new Error(`Error HTTP: ${response.status}`); })
+                        .then(errData => { throw new Error(errData.mensaje || errData.error || `Error HTTP: ${response.status}`); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.condicion_clasificada) {
+                    resultadoDiv.innerText = `CONDICIÓN: ${data.condicion_clasificada}`;
+                    resultadoDiv.style.borderColor = '#28a745';
+                    resultadoDiv.style.backgroundColor = '#e2f0e8';
+                } else if (data.error || data.mensaje) {
+                    resultadoDiv.innerText = `Error de API: ${data.mensaje || data.error}`;
+                    resultadoDiv.classList.add('error');
+                } else {
+                    resultadoDiv.innerText = 'Respuesta inesperada de la API';
+                    resultadoDiv.classList.add('error');
+                }
+            })
+            .catch(error => {
+                console.error('Error al llamar a la API:', error);
+                resultadoDiv.innerText = `⚠️ Error de conexión: ${error.message}. Asegúrate de que la API de Flask esté corriendo en http://localhost:5000/clasificar`;
+                resultadoDiv.classList.add('error');
+            });
+        });
+    </script>
+</body>
+</html>
