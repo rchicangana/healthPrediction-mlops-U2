@@ -18,7 +18,7 @@
 
 - Predicción para Enfermedades Huérfanas: Ser capaz de clasificar con precisión a pesar de la escasez de datos (problema de clases minoritarias).
 
-# Estructura del Repositorioa
+# Estructura del Repositorio
 
 # Path: /Api
 
