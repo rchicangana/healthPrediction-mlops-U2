@@ -6,7 +6,7 @@ WORKDIR /app
 
 # 2. Install Flask using the Python package installer (pip)
 #    It's best practice to use a requirements.txt file, but for a single package:
-RUN pip install flask flask-cors
+RUN pip install flask flask-cors pytest 
 
 # 3. Copy the application code
 COPY app.py .
