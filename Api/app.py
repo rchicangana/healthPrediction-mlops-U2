@@ -1,5 +1,29 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+import logging
+import json
+from datetime import datetime
+
+# Logger personalizado para guardar JSON línea por línea
+logger = logging.getLogger('clasificaciones')
+logger.setLevel(logging.INFO)
+
+LOG_FILE = 'logs_clasificaciones.jsonl'
+# Crear handler que escriba en un archivo
+file_handler = logging.FileHandler(LOG_FILE)  # .jsonl = JSON line
+file_handler.setLevel(logging.INFO)
+
+# Formateador que convierte dict a JSON
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        if isinstance(record.msg, dict):
+            return json.dumps(record.msg)
+        return super().format(record)
+
+file_handler.setFormatter(JsonFormatter())
+logger.addHandler(file_handler)
+
+
 
 app = Flask(__name__)
 CORS(app)
@@ -79,6 +103,16 @@ def clasificar_api():
     # Llamar a la función de clasificación
     resultado = clasificar_condicion(duracion, severidad, impacto)
 
+    # --- Log en formato JSON ---
+    logger.info({
+        "timestamp": datetime.utcnow().isoformat(),
+        "duracion": duracion,
+        "severidad": severidad,
+        "impacto": impacto,
+        "resultado": resultado
+    })
+
+
     # Devolver el resultado en formato JSON
     return jsonify({
         "duracion_dada": duracion,
@@ -86,6 +120,33 @@ def clasificar_api():
         "impacto_dado": impacto,
         "condicion_clasificada": resultado
     })
+
+# Ruta para obtener todos los logs o filtrados
+@app.route('/logs', methods=['GET'])
+def obtener_logs():
+    """
+    Devuelve los logs de clasificaciones.
+    Se puede filtrar por condición mediante query parameter:
+    /logs?condicion=ENFERMEDAD TERMINAL
+    """
+    condicion_filtro = request.args.get('condicion', None)
+    logs = []
+
+    try:
+        with open(LOG_FILE, 'r') as f:
+            for line in f:
+                entry = json.loads(line.strip())
+                if condicion_filtro:
+                    if entry.get('resultado') == condicion_filtro:
+                        logs.append(entry)
+                else:
+                    logs.append(entry)
+    except FileNotFoundError:
+        return jsonify({"error": "Archivo de logs no encontrado"}), 404
+    except json.JSONDecodeError:
+        return jsonify({"error": "Error al leer los logs"}), 500
+
+    return jsonify(logs)
 
 # ----------------------------------------------------------------------
 
