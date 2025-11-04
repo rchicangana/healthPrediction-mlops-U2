@@ -52,7 +52,7 @@ Proveer una API mínima para clasificar condiciones médicas (ejemplo didáctico
 1. Abrir PowerShell y moverse al directorio del proyecto (donde están `Dockerfile` y `app.py`):
 
 ```powershell
-cd "C:\Estudio\Maestria\MLops\Taller 1\Api"
+cd "/Api"
 ```
 
 2. Construir la imagen Docker:
@@ -135,6 +135,8 @@ Respuesta esperada (ejemplo):
 }
 ```
 
+
+
 ### Interfaz Web
 
 La ruta raíz `/` sirve `templates/index.html`, una UI simple que envía el formulario a `/clasificar` y muestra el resultado.
@@ -144,6 +146,29 @@ La ruta raíz `/` sirve `templates/index.html`, una UI simple que envía el form
 - Respuesta 400 "Cuerpo JSON faltante" — Asegúrate de enviar Content-Type: application/json y un JSON válido.
 - Puerto 5000 en uso — cambia el puerto local o para Docker usa otro mapeo `-p 5001:5000` y luego llamada a `http://localhost:5001`.
 - CORS — el Dockerfile instala `flask-cors` y el app habilita CORS para permitir peticiones desde la UI remota.
+
+
+## Nuevas Funcionalidades Agregadas
+
+### 1. Logging de Peticiones
+- Todas las solicitudes a `/clasificar` se registran automáticamente en un archivo **`logs_clasificaciones.jsonl`**.
+- Cada registro incluye:
+  - Timestamp UTC
+  - Duración, severidad e impacto enviados
+  - Resultado de la clasificación
+- Formato **JSON por línea** para fácil lectura por otras APIs.
+
+### 2. API para Consultar Logs
+- Endpoint: `GET /logs` 
+- Permite consultar todos los logs o filtrarlos por condición:
+  - Ejemplo: `/logs?condicion=ENFERMEDAD TERMINAL`
+- Devuelve un **JSON** con los registros filtrados.
+
+### 3. Interfaz Web Mejorada
+- Botón para consultar los logs directamente desde la web.
+- Selector de filtro por condición antes de consultar.
+- Contenedor con scroll que muestra los logs en formato JSON legible.
+- Manejo de errores claro en caso de fallas de conexión o logs vacíos.
 
 
 ## Licencia
