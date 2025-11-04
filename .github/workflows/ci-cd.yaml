@@ -80,7 +80,7 @@ jobs:
         run: |
           cd Api
           pip install -r requirements.txt || pip install flask pytest flask-cors
-          pytest --maxfail=1 --disable-warnings -q
+          python -W ignore -m unittest test_app
 
       - name: Normalizar nombre del repositorio (minúsculas)
         id: repo
