@@ -7,15 +7,18 @@ on:
   # Evento 2: cada push en main
   push:
     branches: [ "main" ]
+
 permissions:
   contents: read
   pull-requests: write
   issues: write
+
 jobs:
   # === EVENTO 1: Pull Request ===
   pr-checks:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
@@ -24,7 +27,7 @@ jobs:
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: "cicd-start"
-          message: "🚀 CI/CD en acción. Ejecutando tareas …"
+          message: "CI/CD en acción. Ejecutando tareas …"
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -49,6 +52,13 @@ jobs:
           header: "cicd-end"
           message: "CI/CD terminado con éxito."
 
+      - name: Comentar fallo del pipeline
+        if: failure()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: "cicd-fail"
+          message: "CI/CD falló durante la ejecución de las pruebas."
+
   # === EVENTO 2: Push en main ===
   build-and-publish:
     if: github.event_name == 'push'
@@ -56,6 +66,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -71,13 +82,17 @@ jobs:
           pip install -r requirements.txt || pip install flask pytest flask-cors
           pytest --maxfail=1 --disable-warnings -q
 
+      - name: Normalizar nombre del repositorio (minúsculas)
+        id: repo
+        run: echo "repo_name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Construir imagen Docker
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:latest ./Api
+          docker build -t ghcr.io/${{ steps.repo.outputs.repo_name }}:latest ./Api
 
       - name: Autenticarse en GitHub Packages
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Publicar imagen Docker
         run: |
-          docker push ghcr.io/${{ github.repository }}:latest
+          docker push ghcr.io/${{ steps.repo.outputs.repo_name }}:latest
