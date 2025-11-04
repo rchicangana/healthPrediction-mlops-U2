@@ -1,0 +1,83 @@
+name: CI/CD Pipeline
+
+on: 
+  # Evento 1: cada Pull Request hacia main
+  pull_request:
+    branches: [ "main" ]
+  # Evento 2: cada push en main
+  push:
+    branches: [ "main" ]
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+jobs:
+  # === EVENTO 1: Pull Request ===
+  pr-checks:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Comentar inicio de CI/CD en el PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: "cicd-start"
+          message: "🚀 CI/CD en acción. Ejecutando tareas …"
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar dependencias
+        run: |
+          cd Api
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || pip install flask unittest flask-cors
+
+      - name: Ejecutar pruebas unitarias
+        run: |
+          cd Api
+          python -W ignore -m unittest test_app
+
+      - name: Comentar finalización exitosa en el PR
+        if: success()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: "cicd-end"
+          message: "CI/CD terminado con éxito."
+
+  # === EVENTO 2: Push en main ===
+  build-and-publish:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar dependencias y correr pruebas
+        run: |
+          cd Api
+          pip install -r requirements.txt || pip install flask pytest flask-cors
+          pytest --maxfail=1 --disable-warnings -q
+
+      - name: Construir imagen Docker
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}:latest ./Api
+
+      - name: Autenticarse en GitHub Packages
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Publicar imagen Docker
+        run: |
+          docker push ghcr.io/${{ github.repository }}:latest
