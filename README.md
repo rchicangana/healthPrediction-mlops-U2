@@ -8,15 +8,21 @@
 
 - Enfermedades Huérfanas (Raras): La cantidad de datos existentes es escasa.
 
+
+## Diseño del Pipeline
+
+> Para información más detallada y arquitectura técnica, consulta [docs/PROPUESTAPipeLine.md](docs/PROPUESTAPipeLine.md)
+
 #### Nota: Las enfermedades huérfanas son aquellas con baja prevalencia que a menudo son crónicas, graves y amenazan la vida, lo que complica su diagnóstico y estudio.
 
-📝 Requerimiento del Proyecto Se requiere construir un Modelo Predictivo capaz de determinar la probabilidad de que un paciente sufra o no de alguna enfermedad, basándose únicamente en los datos de sus síntomas.
+📝 **Requerimiento del Proyecto**  
+Se requiere construir un Modelo Predictivo capaz de determinar la probabilidad de que un paciente sufra o no de alguna enfermedad, basándose únicamente en los datos de sus síntomas.
 
-🛠️ Objetivos del Modelo El modelo debe ser robusto y eficaz para la clasificación, independientemente de la frecuencia de la enfermedad:
+🛠️ **Objetivos del Modelo**  
+El modelo debe ser robusto y eficaz para la clasificación, independientemente de la frecuencia de la enfermedad:
 
-- Predicción para Enfermedades Comunes: Manejar y clasificar correctamente con muchos datos de entrenamiento.
-
-- Predicción para Enfermedades Huérfanas: Ser capaz de clasificar con precisión a pesar de la escasez de datos (problema de clases minoritarias).
+- **Predicción para Enfermedades Comunes:** Manejar y clasificar correctamente con muchos datos de entrenamiento.
+- **Predicción para Enfermedades Huérfanas:** Ser capaz de clasificar con precisión a pesar de la escasez de datos (problema de clases minoritarias).
 
 # Estructura del Repositorio
 
