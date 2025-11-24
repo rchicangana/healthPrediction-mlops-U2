@@ -1,0 +1,127 @@
+name: CI/CD Pipeline - Production
+
+on:
+  push:
+    branches:
+      - prod
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: health-prediction-mlops
+  ECS_SERVICE: health-prediction-prod
+  ECS_CLUSTER: health-prediction-cluster
+  ECS_TASK_DEFINITION: health-prediction-prod
+  CONTAINER_NAME: health-prediction-prod
+
+jobs:
+  test:
+    name: Test Model
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          cd Api
+          pip install -r requirements.txt
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download test data from S3
+        run: |
+          aws s3 cp s3://${{ secrets.S3_BUCKET }}/test_data/test_data.csv /tmp/test_data.csv || echo "Test data not found, using default test cases"
+
+      - name: Download model from S3
+        run: |
+          mkdir -p /tmp
+          aws s3 cp s3://${{ secrets.S3_BUCKET }}/models/health_model.onnx /tmp/model.onnx || echo "Model not found in S3"
+
+      - name: Run unit tests
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_MODEL_PATH: models/health_model.onnx
+          S3_TEST_DATA_PATH: test_data/test_data.csv
+          ENVIRONMENT: prod
+        run: |
+          cd Api
+          python -m pytest test_app.py -v
+
+  build-and-deploy:
+    name: Build and Deploy to Production
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd Api
+          # Build Docker image
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:prod-$IMAGE_TAG .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:prod-latest .
+          
+          # Push images
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:prod-$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:prod-latest
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+            --query 'taskDefinition' \
+            --output json | \
+          jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .deregisteredAt, .enableFaultInjection)' \
+            > task-definition.json || echo "Task definition not found, will create new one"
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:prod-latest
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
