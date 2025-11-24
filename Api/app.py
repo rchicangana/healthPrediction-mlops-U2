@@ -24,12 +24,24 @@ ENVIRONMENT = os.getenv('ENVIRONMENT', 'dev')  # 'dev' o 'prod'
 MODEL_PATH = '/tmp/model.onnx'
 
 # Inicializar cliente S3
-s3_client = boto3.client(
-    's3',
-    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-    region_name=os.getenv('AWS_REGION', 'us-east-1')
-)
+# Si las credenciales están en variables de entorno explícitas, usarlas
+# Si no, boto3 usará las credenciales del entorno (IAM role, AWS CLI config, etc.)
+aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+
+if aws_access_key and aws_secret_key:
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_secret_key,
+        region_name=os.getenv('AWS_REGION', 'us-east-1')
+    )
+else:
+    # Usar credenciales del entorno (configuradas por AWS CLI o IAM role)
+    s3_client = boto3.client(
+        's3',
+        region_name=os.getenv('AWS_REGION', 'us-east-1')
+    )
 
 # Cargar modelo ONNX
 onnx_session = None
@@ -38,16 +50,32 @@ def download_model_from_s3():
     """Descarga el modelo ONNX desde S3 si no existe localmente."""
     global onnx_session
     try:
-        if not os.path.exists(MODEL_PATH):
-            print(f"Descargando modelo desde s3://{S3_BUCKET}/{S3_MODEL_PATH}")
-            s3_client.download_file(S3_BUCKET, S3_MODEL_PATH, MODEL_PATH)
-            print(f"Modelo descargado exitosamente a {MODEL_PATH}")
+        # Si el archivo ya existe localmente, solo cargar el modelo
+        if os.path.exists(MODEL_PATH):
+            print(f"Modelo encontrado localmente en {MODEL_PATH}")
+            if onnx_session is None:
+                onnx_session = ort.InferenceSession(MODEL_PATH)
+                print("Modelo ONNX cargado exitosamente desde archivo local")
+            return
+        
+        # Si no existe, intentar descargarlo de S3
+        print(f"Descargando modelo desde s3://{S3_BUCKET}/{S3_MODEL_PATH}")
+        s3_client.download_file(S3_BUCKET, S3_MODEL_PATH, MODEL_PATH)
+        print(f"Modelo descargado exitosamente a {MODEL_PATH}")
         
         if onnx_session is None:
             onnx_session = ort.InferenceSession(MODEL_PATH)
             print("Modelo ONNX cargado exitosamente")
     except Exception as e:
         print(f"Error al descargar/cargar modelo: {str(e)}")
+        # Si el modelo ya existe localmente pero hubo error en S3, intentar cargar el local
+        if os.path.exists(MODEL_PATH) and onnx_session is None:
+            try:
+                onnx_session = ort.InferenceSession(MODEL_PATH)
+                print("Modelo ONNX cargado exitosamente desde archivo local existente")
+                return
+            except:
+                pass
         raise
 
 def save_prediction_to_s3(prediction_text):

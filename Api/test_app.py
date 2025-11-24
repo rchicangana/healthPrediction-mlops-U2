@@ -22,12 +22,24 @@ class TestClasificacion(unittest.TestCase):
         self.s3_test_data_path = os.getenv('S3_TEST_DATA_PATH', 'test_data/test_data.csv')
         
         # Inicializar cliente S3
-        self.s3_client = boto3.client(
-            's3',
-            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-            region_name=os.getenv('AWS_REGION', 'us-east-1')
-        )
+        # Si las credenciales están en variables de entorno explícitas, usarlas
+        # Si no, boto3 usará las credenciales del entorno (IAM role, AWS CLI config, etc.)
+        aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+        aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        
+        if aws_access_key and aws_secret_key:
+            self.s3_client = boto3.client(
+                's3',
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key,
+                region_name=os.getenv('AWS_REGION', 'us-east-1')
+            )
+        else:
+            # Usar credenciales del entorno (configuradas por AWS CLI o IAM role)
+            self.s3_client = boto3.client(
+                's3',
+                region_name=os.getenv('AWS_REGION', 'us-east-1')
+            )
 
     def download_test_data_from_s3(self):
         """Descarga los datos de prueba desde S3."""
@@ -164,6 +176,7 @@ class TestClasificacion(unittest.TestCase):
             
         except Exception as e:
             self.fail(f"Error en la prueba de métrica: {str(e)}")
+
 
     def test_clasificar_api(self):
         """Test a la ruta API /clasificar."""
