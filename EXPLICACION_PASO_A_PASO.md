@@ -494,7 +494,5 @@ Los **secrets** son valores sensibles almacenados en GitHub. No se muestran en l
 4. **Explorar AWS**: Crea recursos en AWS y entiende cómo funcionan
 5. **Mejorar el pipeline**: Agrega más etapas (notificaciones, rollback, etc.)
 
----
 
-¿Tienes preguntas sobre algún paso específico? ¡Puedo profundizar en cualquier parte!
 
