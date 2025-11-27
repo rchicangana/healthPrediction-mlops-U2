@@ -513,5 +513,4 @@ Con el tier gratuito de AWS, puedes usar:
 
 ---
 
-¿Necesitas ayuda con algún paso específico? ¡Pregunta y te ayudo!
 
