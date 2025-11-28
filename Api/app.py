@@ -273,7 +273,7 @@ def obtener_logs():
 
     return jsonify(logs)
 
-@app.route('/health', methods=['GET'])
+@app.route('/health2', methods=['GET'])
 def health_check():
     """Endpoint de health check."""
     model_status = "loaded" if onnx_session is not None else "not_loaded"
