@@ -213,7 +213,7 @@ class TestClasificacion(unittest.TestCase):
 
     def test_health_endpoint(self):
         """Test del endpoint de health check."""
-        response = self.client.get('/health')
+        response = self.client.get('/health2')
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
         self.assertIn("status", data)
