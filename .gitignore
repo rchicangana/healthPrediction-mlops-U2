@@ -205,3 +205,15 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Machine Learning Models
+# Archivos de modelos entrenados (suelen ser grandes y binarios)
+*.pkl
+*.pickle
+*.onnx
+*.h5
+*.pth
+*.pt
+*.joblib
+*.model
+*.weights

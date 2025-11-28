@@ -177,6 +177,8 @@ La ruta raíz `/` sirve `templates/index.html`, una UI simple que envía el form
 - Manejo de errores claro en caso de fallas de conexión o logs vacíos.
 
 
+### Final: Mas Info en /docs
+
 ## Licencia
 
 Este proyecto es de ejemplo/educativo. 
